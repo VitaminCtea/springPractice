@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>footer</title>
+</head>
+<body>
+<!-- th:assert暂时没体现出什么效果，也不报错 -->
+<!--
+            内联表达式等价于 -> <p th:text="|Our website is: ${website}|"></p>, 语法为: [[${...}]]或[(${...})]
+            [[${...}]]和[(${...})]区别是：
+                [(${...})]内联的内容有HTML标签时不会被转义：<p>The message is "[(${msg})]"</p> -> <p>The message is "This is <b>great!</b>"</p>
+                [[${...}]]会被转义：<p>The message is "[[${msg}]]"</p> -> <p>The message is "This is &lt;b&gt;great!&lt;/b&gt;"</p>
+                [(${...})]等价于th:utext -> <p th:utext="|The message is ${msg}|"></p>
+                [[${...}]]等价于th:text -> <p th:text="|The message is ${msg}|"></p>
+            禁用内联：
+                <p th:inline="none">A double array looks like this: [[1, 2, 3], [4, 5]]!</p> -> <p>A double array looks like this: [[1, 2, 3], [4, 5]]!</p>
+                也就是说不对这种二维数组的符号进行解析
+      -->
+<div th:fragment="copyRight(website)" th:assert="${!#strings.isEmpty(website)}">
+    &copy; 2011 The Good Thymes Virtual Grocery
+    <p>Our website is: [[${website}]]</p>
+</div>
+</body>
+</html>

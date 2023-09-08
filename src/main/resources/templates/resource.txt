@@ -1,0 +1,2 @@
+Resource被当作依赖进行注入测试，如果有前缀(classpath、file://、http://...)这种，则Spring会根据使用不同的前缀对应的策略进行加载文件！
+如果是按相对路径(some/path/xxx.txt)这种，则Spring会自动选出合适的上下文Resource进行加载

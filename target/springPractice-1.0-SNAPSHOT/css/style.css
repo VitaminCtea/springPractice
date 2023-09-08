@@ -1,0 +1,129 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.navigation {
+    font-size: 0;
+}
+
+.navigation a {
+    position: relative;
+    box-sizing: content-box;
+    font-size: 16px;
+    display: inline-block;
+    padding: 0 20px;
+    text-decoration: none;
+    vertical-align: middle;
+}
+
+.navigation a:after {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 12px;
+    margin: 0;
+    font-size: 0;
+    padding: 0;
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: black;
+}
+
+.navigation a:last-child { padding-right: 0; }
+.navigation a:last-child:after { display: none; }
+.navigation a:first-child { padding-left: 0; }
+
+pre {
+    margin-bottom: 0;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem {
+    font-size: 14px;
+    line-height: 24px;
+}
+
+.thymeleafURLDesc {
+    display: flex;
+    padding: 0;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-evenly;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem {
+    position: relative;
+    list-style: upper-roman inside;
+    flex-basis: calc(100% / 5);
+    flex-grow: 0;
+    padding: 20px;
+    line-height: 24px;
+    margin: 20px;
+    border-radius: 10px;
+    height: 130px;
+    box-shadow: 2px 3px 10px #888888;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem:before {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #fff;
+    border-radius: 50%;
+    left: 10px;
+    top: 10px;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(odd) {
+    background-color: burlywood;
+    animation: thymeleafURLDescItemAnimationOdd 5s infinite linear alternate;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(even) {
+    background-color: steelblue;
+    animation: thymeleafURLDescItemAnimationEven 5s infinite linear alternate;
+}
+
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(1) { animation-delay: .1s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(2) { animation-delay: .3s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(3) { animation-delay: .2s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(4) { animation-delay: .5s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(5) { animation-delay: .4s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(6) { animation-delay: .6s; }
+.thymeleafURLDesc .thymeleafURLDescItem:nth-child(7) { animation-delay: .8s; }
+
+@keyframes thymeleafURLDescItemAnimationOdd {
+    0% {
+        background-color: burlywood;
+    }
+
+    33%, 50% {
+        background-color: mistyrose;
+    }
+
+    100% {
+        background-color: plum;
+    }
+}
+
+@keyframes thymeleafURLDescItemAnimationEven {
+    0% {
+        background-color: steelblue;
+    }
+
+    33%, 50% {
+        background-color: darkseagreen;
+    }
+
+    100% {
+        background-color: lavender;
+    }
+}
+
+.footer {
+    text-align: center;
+}

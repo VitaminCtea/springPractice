@@ -1,0 +1,53 @@
+swapCharBufferDataAdjacentCharacters函数工作示意图
+无论是get/put方法，内部都会计算下一个索引位，关键代码：hb[ix(nextPutIndex())] = x; nextPutIndex方法返回的是原来的索引，生成的是下一个索引：
+
+int p = position;
+position = p + 1;
+return p;
+
+
+第一轮
+初始：  position/mark
+            ⬇
+            U s i n g B u f f e r s
+
+两次get之后：position
+              ⬇
+            U s i n g B u f f e r s
+            ⬆
+           mark
+
+交换：       position
+               ⬇
+             s U i n g B u f f e r s
+             ⬆
+            mark
+
+交换结束：     position
+                 ⬇
+             s U i n g B u f f e r s
+             ⬆
+            mark
+
+第二轮
+初始：     position/mark
+                ⬇
+            s U i n g B u f f e r s
+
+两次get之后：   position
+                  ⬇
+            s U i n g B u f f e r s
+                ⬆
+              mark
+
+交换：          position
+                  ⬇
+            s U n i g B u f f e r s
+                ⬆
+              mark
+
+交换结束：         position
+                    ⬇
+            s U n i g B u f f e r s
+                ⬆
+               mark
