@@ -945,7 +945,7 @@ public class App {
     private static String createCrc(int info, String polynomial) {
         final int LENGTH = polynomial.length() - 1,
                 threshold = 1 << LENGTH,
-                decimalPolynomial = Integer.parseInt(polynomial, 2);
+                decimalPolynomial = ConversionTool.binary2decimal(polynomial);
         checkPolynomialValidity(decimalPolynomial);
         checkInfoCodeAndVerificationCode(info, LENGTH);
         int result = info << LENGTH,
