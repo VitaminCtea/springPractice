@@ -929,7 +929,21 @@ public class App {
 //            for (String errorCrc: data2) System.out.println(crcErrorRecovery(errorCrc, "1101"));
             System.out.println(crcErrorRecovery("110010110101010", "111010001"));
             System.out.println(crcErrorRecovery(createRandomErrorCrc(0x65, 0x1D1), 0x1D1));
+            System.out.println((char) 49);
+            System.out.println(binary2decimalSuccessiveProductAddition("101000101"));
+            System.out.println(binary2decimalSuccessiveProductAddition("1010"));
         }
+    }
+
+    // 二进制转十进制(逐次乘积相加，先加后乘，最后一位不乘2)
+    private static int binary2decimalSuccessiveProductAddition(String binary) {
+        final int LENGTH = binary.length();
+        int result = 0;
+        for (int i = 0; i < LENGTH; i++) {
+            result |= Character.getNumericValue(binary.charAt(i));
+            if (i < LENGTH - 1) result <<= 1;
+        }
+        return result;
     }
 
     private static final Random rand = ThreadLocalRandom.current();
@@ -1005,7 +1019,7 @@ public class App {
             // 将错误移动到最高位时，进行改错，最高位做异或操作，0 -> 1, 1 -> 0
             if (remainder == ERROR_CORRECTION_POSITION) decimalCrc ^= ONLY_HIGHEST_1_CRC_LENGTH;
 
-            // 因为当余数位数不足多项式的位数时，只能在后面补零操作，商无意义，等到和多项式二进制串长度一致时在进行模2减
+            // 因为当余数位数不足多项式的位数时，只能在后面补零操作，商无意义，等到和多项式二进制串长度一致时在进行模2除
             // 0010 -> 0100 -> 1000 ^ 1011 = 011
             if ((remainder <<= 1) >= REMAINDER_MAXIMUM_NUMBER_DIGITS) remainder ^= DECIMAL_POLYNOMIAL;
 
