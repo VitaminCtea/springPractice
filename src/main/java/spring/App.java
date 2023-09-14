@@ -18,14 +18,17 @@ import spring.testPrototype.SingletonBean;
 import spring.testPrototype.TestPrototype;
 import spring.testRef.event.EmailService;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.PrintStream;
 import java.lang.annotation.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.file.*;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
@@ -929,11 +932,62 @@ public class App {
 //            for (String errorCrc: data2) System.out.println(crcErrorRecovery(errorCrc, "1101"));
             System.out.println(crcErrorRecovery("110010110101010", "111010001"));
             System.out.println(crcErrorRecovery(createRandomErrorCrc(0x65, 0x1D1), 0x1D1));
-            System.out.println((char) 49);
             System.out.println(binary2decimalSuccessiveProductAddition("101000101"));
             System.out.println(binary2decimalSuccessiveProductAddition("1010"));
+            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(0.101001));
+            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(0.111100));
+            System.out.println(fraction2binaryMultiplicationBasedRoundingMethod(10.8));
+            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(1100.111100));
+            System.out.println(fraction2binaryMultiplicationBasedRoundingMethod(binary2fractionSuccessiveBaseAdditionMethod(1100.111100)));
         }
     }
+
+    private static String fraction2binaryMultiplicationBasedRoundingMethod(double fraction) {
+        String doubleStr = String.valueOf(fraction);
+        String integerPart = getIntegerPart(doubleStr);
+        String binary = Integer.toBinaryString(integerPart2decimal(integerPart));
+        StringBuilder result = new StringBuilder(binary + '.');
+
+        BigDecimal decimal = getBigDecimal(doubleStr).subtract(getBigDecimal(integerPart));
+        BigDecimal base = getIntegerBigDecimal(2);
+        BigDecimal minuend = getIntegerBigDecimal(1);
+
+        double record = decimal.doubleValue();
+        double temp;
+        do {
+            if ((decimal = decimal.multiply(base)).doubleValue() >= 1) {
+                result.append(1);
+                decimal = decimal.subtract(minuend);
+            } else result.append(0);
+        } while ((temp = decimal.doubleValue()) != 0 && Double.compare(record, temp) != 0);
+
+        int begin = binary.length();
+        int end = begin;
+        for (int i = begin; Objects.equals(result.charAt(i), '0'); i++, end++);
+        if (begin != end) result.delete(begin, end);
+        return result.toString();
+    }
+
+    // 逐次除基相加法(小数)
+    private static double binary2fractionSuccessiveBaseAdditionMethod(double fraction) {
+        String str = String.valueOf(fraction);
+        final int LENGTH = str.length(), DECIMAL_LENGTH = LENGTH - 2;
+        int begin = str.indexOf('.') + 1;
+        int end = LENGTH - 1;
+
+        BigDecimal decimal = getIntegerBigDecimal(0);
+        BigDecimal twoMultiple = getIntegerBigDecimal(2);
+
+        for (int i = end; i >= begin; i--)
+            decimal = decimal.add(BigDecimal.valueOf(Character.getNumericValue(str.charAt(i))))
+                    .divide(twoMultiple, DECIMAL_LENGTH, RoundingMode.HALF_UP);
+        return decimal.add(getIntegerBigDecimal(ConversionTool.binary2decimal(getIntegerPart(str)))).doubleValue();
+    }
+
+    private static String getIntegerPart(String data) { return data.substring(0, data.indexOf('.')); }
+    private static int integerPart2decimal(String integer) { return Integer.parseInt(integer); }
+    private static BigDecimal getBigDecimal(String val) { return new BigDecimal(val); }
+    private static BigDecimal getIntegerBigDecimal(int val) { return new BigDecimal(Integer.toString(val)); }
 
     // 二进制转十进制(逐次乘积相加，先加后乘，最后一位不乘2)
     private static int binary2decimalSuccessiveProductAddition(String binary) {
