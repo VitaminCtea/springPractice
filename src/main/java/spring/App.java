@@ -939,18 +939,20 @@ public class App {
             System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(10.8));
             System.out.println(binary2decimalSuccessiveBaseAdditionMethod(1100.111100));
             System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(binary2decimalSuccessiveBaseAdditionMethod(1100.111100)));
+            System.out.println(removeLeadingZeros(new StringBuilder("1100.00011"), "1100"));
         }
     }
 
     private static String decimal2binaryMultiplicationBasedRoundingMethod(double decimalFraction) {
         String doubleStr = primitive2string(decimalFraction);
+        checkParameterValid(doubleStr);
         String integerPart = getIntegerPart(doubleStr);
         String integerPartBinary = Integer.toBinaryString(Integer.parseInt(integerPart));
         StringBuilder result = new StringBuilder(integerPartBinary + '.');
 
         BigDecimal decimal = getBigDecimal(doubleStr).subtract(getBigDecimal(integerPart));
         BigDecimal base = getBigDecimal(2);
-        BigDecimal minuend = getBigDecimal(1);
+        BigDecimal minuend = BigDecimal.ONE;
 
         double record = decimal.doubleValue();
         double temp;
@@ -969,22 +971,31 @@ public class App {
     // 逐次除基相加法(小数)
     private static double binary2decimalSuccessiveBaseAdditionMethod(double binaryDecimal) {
         String str = primitive2string(binaryDecimal);
-        final int LENGTH = str.length(), DECIMAL_LENGTH = LENGTH - 2;
-        int begin = str.indexOf('.') + 1;
+        checkParameterValid(str);
+        final int LENGTH = str.length(), DECIMAL_LENGTH = LENGTH - 2, MASK = 1;
+        int begin = findDecimalPointPosition(str) + 1;
         int end = LENGTH - 1;
 
-        BigDecimal result = getBigDecimal(0);
+        BigDecimal[] cache = { BigDecimal.ZERO, BigDecimal.ONE };
+        BigDecimal result = cache[0];
         BigDecimal base = getBigDecimal(2);
 
         for (int i = end; i >= begin; i--)
-            result = result.add(getBigDecimal(char2decimal(str, i))).divide(base, DECIMAL_LENGTH, RoundingMode.HALF_UP);
+            result = result.add(cache[char2decimal(str, i) & MASK]).divide(base, DECIMAL_LENGTH, RoundingMode.HALF_UP);
         return getBigDecimalDoubleValue(result.add(getBigDecimal(ConversionTool.binary2decimal(getIntegerPart(str)))));
     }
 
-    private static String getIntegerPart(String data) { return data.substring(0, data.indexOf('.')); }
+    private static String getIntegerPart(String data) { return data.substring(0, findDecimalPointPosition(data)); }
     private static <T> BigDecimal getBigDecimal(T val) { return new BigDecimal(String.valueOf(val)); }
     private static double getBigDecimalDoubleValue(BigDecimal decimal) { return decimal.doubleValue(); }
+
     private static int char2decimal(String data, int index) { return Character.getNumericValue(data.charAt(index)); }
+    private static int findDecimalPointPosition(String data) { return data.indexOf('.'); }
+
+    private static void checkParameterValid(String data) {
+        if (findDecimalPointPosition(data) == -1)
+            throw new IllegalArgumentException("The parameter is not a pure decimal");
+    }
     private static <T> String primitive2string(T primitive) {
         try {
             // 等价于String.valueOf(primitive)
@@ -994,7 +1005,14 @@ public class App {
         }
     }
     private static String removeLeadingZeros(StringBuilder sb, String integerPartBinary) {
-        int begin = integerPartBinary.length() + 1, end = begin;
+        return removeLeadingZeros(sb, integerPartBinary.length());
+    }
+
+    private static String removeLeadingZeros(StringBuilder sb, int integerPartBinaryLength) {
+        int decimalPointPosition = sb.indexOf(".");
+        int begin = Math.max(Math.min(integerPartBinaryLength, decimalPointPosition), 1);
+        if (integerPartBinaryLength < decimalPointPosition) begin += decimalPointPosition - integerPartBinaryLength;
+        int end = ++begin;
         for (int i = begin; Objects.equals(sb.charAt(i), '0'); i++, end++);
         if (begin != end) sb.delete(begin, end);
         return sb.toString();
