@@ -934,67 +934,78 @@ public class App {
             System.out.println(crcErrorRecovery(createRandomErrorCrc(0x65, 0x1D1), 0x1D1));
             System.out.println(binary2decimalSuccessiveProductAddition("101000101"));
             System.out.println(binary2decimalSuccessiveProductAddition("1010"));
-            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(0.101001));
-            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(0.111100));
-            System.out.println(fraction2binaryMultiplicationBasedRoundingMethod(10.8));
-            System.out.println(binary2fractionSuccessiveBaseAdditionMethod(1100.111100));
-            System.out.println(fraction2binaryMultiplicationBasedRoundingMethod(binary2fractionSuccessiveBaseAdditionMethod(1100.111100)));
+            System.out.println(binary2decimalSuccessiveBaseAdditionMethod(0.101001));
+            System.out.println(binary2decimalSuccessiveBaseAdditionMethod(0.111100));
+            System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(10.8));
+            System.out.println(binary2decimalSuccessiveBaseAdditionMethod(1100.111100));
+            System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(binary2decimalSuccessiveBaseAdditionMethod(1100.111100)));
         }
     }
 
-    private static String fraction2binaryMultiplicationBasedRoundingMethod(double fraction) {
-        String doubleStr = String.valueOf(fraction);
+    private static String decimal2binaryMultiplicationBasedRoundingMethod(double decimalFraction) {
+        String doubleStr = primitive2string(decimalFraction);
         String integerPart = getIntegerPart(doubleStr);
-        String binary = Integer.toBinaryString(integerPart2decimal(integerPart));
-        StringBuilder result = new StringBuilder(binary + '.');
+        String integerPartBinary = Integer.toBinaryString(Integer.parseInt(integerPart));
+        StringBuilder result = new StringBuilder(integerPartBinary + '.');
 
         BigDecimal decimal = getBigDecimal(doubleStr).subtract(getBigDecimal(integerPart));
-        BigDecimal base = getIntegerBigDecimal(2);
-        BigDecimal minuend = getIntegerBigDecimal(1);
+        BigDecimal base = getBigDecimal(2);
+        BigDecimal minuend = getBigDecimal(1);
 
         double record = decimal.doubleValue();
         double temp;
         do {
-            if ((decimal = decimal.multiply(base)).doubleValue() >= 1) {
-                result.append(1);
+            int val = 0;
+            if ((temp = getBigDecimalDoubleValue((decimal = decimal.multiply(base)))) >= 1) {
+                val++;
                 decimal = decimal.subtract(minuend);
-            } else result.append(0);
-        } while ((temp = decimal.doubleValue()) != 0 && Double.compare(record, temp) != 0);
+            }
+            result.append(val);
+        } while (temp != 0 && Double.compare(record, temp) != 0);
 
-        int begin = binary.length();
-        int end = begin;
-        for (int i = begin; Objects.equals(result.charAt(i), '0'); i++, end++);
-        if (begin != end) result.delete(begin, end);
-        return result.toString();
+        return removeLeadingZeros(result, integerPartBinary);
     }
 
     // 逐次除基相加法(小数)
-    private static double binary2fractionSuccessiveBaseAdditionMethod(double fraction) {
-        String str = String.valueOf(fraction);
+    private static double binary2decimalSuccessiveBaseAdditionMethod(double binaryDecimal) {
+        String str = primitive2string(binaryDecimal);
         final int LENGTH = str.length(), DECIMAL_LENGTH = LENGTH - 2;
         int begin = str.indexOf('.') + 1;
         int end = LENGTH - 1;
 
-        BigDecimal decimal = getIntegerBigDecimal(0);
-        BigDecimal twoMultiple = getIntegerBigDecimal(2);
+        BigDecimal result = getBigDecimal(0);
+        BigDecimal base = getBigDecimal(2);
 
         for (int i = end; i >= begin; i--)
-            decimal = decimal.add(BigDecimal.valueOf(Character.getNumericValue(str.charAt(i))))
-                    .divide(twoMultiple, DECIMAL_LENGTH, RoundingMode.HALF_UP);
-        return decimal.add(getIntegerBigDecimal(ConversionTool.binary2decimal(getIntegerPart(str)))).doubleValue();
+            result = result.add(getBigDecimal(char2decimal(str, i))).divide(base, DECIMAL_LENGTH, RoundingMode.HALF_UP);
+        return getBigDecimalDoubleValue(result.add(getBigDecimal(ConversionTool.binary2decimal(getIntegerPart(str)))));
     }
 
     private static String getIntegerPart(String data) { return data.substring(0, data.indexOf('.')); }
-    private static int integerPart2decimal(String integer) { return Integer.parseInt(integer); }
-    private static BigDecimal getBigDecimal(String val) { return new BigDecimal(val); }
-    private static BigDecimal getIntegerBigDecimal(int val) { return new BigDecimal(Integer.toString(val)); }
+    private static <T> BigDecimal getBigDecimal(T val) { return new BigDecimal(String.valueOf(val)); }
+    private static double getBigDecimalDoubleValue(BigDecimal decimal) { return decimal.doubleValue(); }
+    private static int char2decimal(String data, int index) { return Character.getNumericValue(data.charAt(index)); }
+    private static <T> String primitive2string(T primitive) {
+        try {
+            // 等价于String.valueOf(primitive)
+            return primitiveToWrapper(primitive.getClass()).getDeclaredMethod("toString").invoke(primitive).toString();
+        } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static String removeLeadingZeros(StringBuilder sb, String integerPartBinary) {
+        int begin = integerPartBinary.length() + 1, end = begin;
+        for (int i = begin; Objects.equals(sb.charAt(i), '0'); i++, end++);
+        if (begin != end) sb.delete(begin, end);
+        return sb.toString();
+    }
 
     // 二进制转十进制(逐次乘积相加，先加后乘，最后一位不乘2)
     private static int binary2decimalSuccessiveProductAddition(String binary) {
         final int LENGTH = binary.length();
         int result = 0;
         for (int i = 0; i < LENGTH; i++) {
-            result |= Character.getNumericValue(binary.charAt(i));
+            result |= char2decimal(binary, i);
             if (i < LENGTH - 1) result <<= 1;
         }
         return result;
@@ -1282,11 +1293,14 @@ public class App {
         return buffer;
     }
 
-    private static Class<?> primitiveToWrapper(Class<?> data) { return !data.isPrimitive() ? data : Array.get(Array.newInstance(data, 1), 0).getClass(); }
+    private static Class<?> primitiveToWrapper(Class<?> data) {
+        return !data.isPrimitive() ? data : Array.get(Array.newInstance(data, 1), 0).getClass();
+    }
     private static Class<?> wrapperToPrimitive(Class<?> data) {
         if (data.isPrimitive()) return data;
         Map<Class<?>, Class<?>> wrapperMap = new HashMap<>();
-        Class<?>[] primitiveClasses = { char.class, boolean.class, byte.class, short.class, int.class, long.class, float.class, double.class };
+        Class<?>[] primitiveClasses = {
+                char.class, boolean.class, byte.class, short.class, int.class, long.class, float.class, double.class };
         for (Class<?> primitiveClass: primitiveClasses) wrapperMap.put(primitiveToWrapper(primitiveClass), primitiveClass);
         return wrapperMap.get(data);
     }
