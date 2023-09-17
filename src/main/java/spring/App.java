@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.NoSuchFileException;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.regex.MatchResult;
 import java.util.stream.IntStream;
@@ -939,13 +939,14 @@ public class App {
             System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(10.8));
             System.out.println(binary2decimalSuccessiveBaseAdditionMethod(1100.111100));
             System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(binary2decimalSuccessiveBaseAdditionMethod(1100.111100)));
-            System.out.println(removeLeadingZeros(new StringBuilder("1100.00011"), "1100"));
+            System.out.println(removeLeadingZeros(new StringBuilder("1100.00011")));
+//            System.out.println(binary2decimalSuccessiveBaseAdditionMethod(1110.00112));
         }
     }
 
     private static String decimal2binaryMultiplicationBasedRoundingMethod(double decimalFraction) {
         String doubleStr = primitive2string(decimalFraction);
-        checkParameterValid(doubleStr);
+        checkDecimalPointExist(doubleStr);
         String integerPart = getIntegerPart(doubleStr);
         String integerPartBinary = Integer.toBinaryString(Integer.parseInt(integerPart));
         StringBuilder result = new StringBuilder(integerPartBinary + '.');
@@ -965,13 +966,14 @@ public class App {
             result.append(val);
         } while (temp != 0 && Double.compare(record, temp) != 0);
 
-        return removeLeadingZeros(result, integerPartBinary);
+        return removeLeadingZeros(result);
     }
 
     // 逐次除基相加法(小数)
     private static double binary2decimalSuccessiveBaseAdditionMethod(double binaryDecimal) {
         String str = primitive2string(binaryDecimal);
-        checkParameterValid(str);
+        checkDecimalPointExist(str);
+        checkDataValid(str);
         final int LENGTH = str.length(), DECIMAL_LENGTH = LENGTH - 2, MASK = 1;
         int begin = findDecimalPointPosition(str) + 1;
         int end = LENGTH - 1;
@@ -992,27 +994,42 @@ public class App {
     private static int char2decimal(String data, int index) { return Character.getNumericValue(data.charAt(index)); }
     private static int findDecimalPointPosition(String data) { return data.indexOf('.'); }
 
-    private static void checkParameterValid(String data) {
+    private static void checkDataValid(String binary) {
+        int position = binary.indexOf('.');
+        int fractionStartPosition = position + 1;
+        check(binary.substring(0, position), 0);
+        check(binary.substring(fractionStartPosition), fractionStartPosition);
+    }
+
+    private static void check(String data, int beginPosition) {
+        for (int i = 0; i < data.length(); i++) {
+            char c = data.charAt(i);
+            if (c != '0' && c != '1')
+                throw new IllegalArgumentException(
+                        String.format("The data must be composed of binary numerical values. Wrong position at index %d",
+                                beginPosition == 0 ? i : beginPosition + i));
+        }
+    }
+
+    private static void checkDecimalPointExist(String data) {
         if (findDecimalPointPosition(data) == -1)
             throw new IllegalArgumentException("The parameter is not a pure decimal");
     }
+
     private static <T> String primitive2string(T primitive) {
         try {
             // 等价于String.valueOf(primitive)
-            return primitiveToWrapper(primitive.getClass()).getDeclaredMethod("toString").invoke(primitive).toString();
+            return primitiveToWrapper(primitive.getClass())
+                    .getDeclaredMethod("toString")
+                    .invoke(primitive)
+                    .toString();
         } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
-    private static String removeLeadingZeros(StringBuilder sb, String integerPartBinary) {
-        return removeLeadingZeros(sb, integerPartBinary.length());
-    }
 
-    private static String removeLeadingZeros(StringBuilder sb, int integerPartBinaryLength) {
-        int decimalPointPosition = sb.indexOf(".");
-        int begin = Math.max(Math.min(integerPartBinaryLength, decimalPointPosition), 1);
-        if (integerPartBinaryLength < decimalPointPosition) begin += decimalPointPosition - integerPartBinaryLength;
-        int end = ++begin;
+    private static String removeLeadingZeros(StringBuilder sb) {
+        int begin = sb.indexOf(".") + 1, end = begin;
         for (int i = begin; Objects.equals(sb.charAt(i), '0'); i++, end++);
         if (begin != end) sb.delete(begin, end);
         return sb.toString();
