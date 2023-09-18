@@ -19,6 +19,7 @@ import spring.testPrototype.TestPrototype;
 import spring.testRef.event.EmailService;
 
 import java.io.BufferedOutputStream;
+import java.io.Console;
 import java.io.PrintStream;
 import java.lang.annotation.*;
 import java.lang.reflect.Array;
@@ -29,6 +30,9 @@ import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.NoSuchFileException;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -941,6 +945,57 @@ public class App {
             System.out.println(decimal2binaryMultiplicationBasedRoundingMethod(binary2decimalSuccessiveBaseAdditionMethod(1100.111100)));
             System.out.println(removeLeadingZeros(new StringBuilder("1100.00011")));
 //            System.out.println(binary2decimalSuccessiveBaseAdditionMethod(1110.00112));
+
+            List<Template<?>> list = new ArrayList<>();
+            list.add(createTemplate("c", "%+.2f", "打印正数和负数的符号"));
+            list.add(createTemplate("空格", "|% .2f|",  "在正数之前添加空格"));
+            list.add(createTemplate("0", "%010.2f", "数字前面补0"));
+            list.add(createTemplate("-", "|%-10.2f|", "左对齐"));
+            list.add(createTemplate("(", "%(.2f", "将负数括在括号内", -3333.33));
+            list.add(createTemplate(",", "%,.2f", "添加千分符"));
+            list.add(createTemplate("#(对于x或0格式)", "%#x", "添加前缀0x或0", 97));
+            list.add(createTemplate("$", "%1$d %1$x", "指定要格式化的参数索引。例如，%1$d %1$x将以十进制和十六进制格式打印第1个参数", 159));
+            list.add(createTemplate("<", "%d %<x", "格式化前面说明的数值。例如，%d%<x将以十进制和十六进制打印同一个数值", 159));
+            printfUsage(list);
+            System.out.printf(
+                    "%1$s %2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$td",
+                    ConsoleOutputController.generatorColorText("当前日期：", ConsoleOutputController.ForegroundColor.BLUE),
+                    LocalDateTime.now()
+            );
+        }
+    }
+
+    private static class Template<T> {
+        public String sign;
+        public String template;
+        public String desc;
+        public T val;
+        public Template(String sign, String template, String desc, T val) {
+            this.sign = sign;
+            this.template = template;
+            this.desc = desc;
+            this.val = val;
+        }
+    }
+
+    private static Template<Double> createTemplate(String sign, String template, String desc) {
+        return createTemplate(sign, template, desc, 3333.33);
+    }
+
+    private static <T> Template<T> createTemplate(String sign, String template, String desc, T val) {
+        return new Template<>(sign, template, desc, val);
+    }
+
+    private static void printfUsage(List<Template<?>> data) {
+        System.out.printf("%10s%15s%20s%25s\n", "标志", "模板", "示例", "目的");
+        for (Template<?> template: data) {
+            System.out.printf("%10s%12s", template.sign, "");
+            System.out.printf("%s", template.template);
+            System.out.printf("%12s", "");
+            System.out.printf(template.template, template.val);
+            System.out.printf("%20s", "");
+            System.out.printf("%s", template.desc);
+            System.out.println();
         }
     }
 
@@ -996,18 +1051,16 @@ public class App {
 
     private static void checkDataValid(String binary) {
         int position = binary.indexOf('.');
-        int fractionStartPosition = position + 1;
-        check(binary.substring(0, position), 0);
-        check(binary.substring(fractionStartPosition), fractionStartPosition);
+        check(binary, 0, position);
+        check(binary, position + 1, binary.length());
     }
 
-    private static void check(String data, int beginPosition) {
-        for (int i = 0; i < data.length(); i++) {
+    private static void check(String data, int begin, int end) {
+        for (int i = begin; i < end; i++) {
             char c = data.charAt(i);
             if (c != '0' && c != '1')
                 throw new IllegalArgumentException(
-                        String.format("The data must be composed of binary numerical values. Wrong position at index %d",
-                                beginPosition == 0 ? i : beginPosition + i));
+                        String.format("The data must be composed of binary numerical values. Wrong position at index %d", i));
         }
     }
 
