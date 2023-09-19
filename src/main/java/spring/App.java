@@ -18,6 +18,11 @@ import spring.testPrototype.SingletonBean;
 import spring.testPrototype.TestPrototype;
 import spring.testRef.event.EmailService;
 
+import javax.swing.*;
+import javax.swing.Timer;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedOutputStream;
 import java.io.Console;
 import java.io.PrintStream;
@@ -31,10 +36,13 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.NoSuchFileException;
 import java.text.NumberFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.regex.MatchResult;
 import java.util.stream.IntStream;
@@ -958,11 +966,26 @@ public class App {
             list.add(createTemplate("<", "%d %<x", "格式化前面说明的数值。例如，%d%<x将以十进制和十六进制打印同一个数值", 159));
             printfUsage(list);
             System.out.printf(
-                    "%1$s %2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$td",
+                    "%1$s %2$tY-%2$tm-%2$td %2$tH:%2$tM:%2$td\n",
                     ConsoleOutputController.generatorColorText("当前日期：", ConsoleOutputController.ForegroundColor.BLUE),
                     LocalDateTime.now()
             );
+
+            timerForDisplayingTime();
         }
+    }
+
+    private static void timerForDisplayingTime() {
+        ScheduledExecutorService service = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
+        service.scheduleAtFixedRate(() -> {
+            System.out.println("At the tone, the time is " + LocalDateTime.now());
+            Toolkit.getDefaultToolkit().beep();
+        }, 0, 1, TimeUnit.SECONDS);
+        service.scheduleAtFixedRate(() -> {
+            while (JOptionPane.showConfirmDialog(null, "Quit program?") != 0);
+            service.shutdown();
+            System.exit(0);
+        }, 0, 100, TimeUnit.MILLISECONDS);
     }
 
     private static class Template<T> {
