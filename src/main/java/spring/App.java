@@ -19,30 +19,26 @@ import spring.testPrototype.TestPrototype;
 import spring.testRef.event.EmailService;
 
 import javax.swing.*;
-import javax.swing.Timer;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.BufferedOutputStream;
-import java.io.Console;
 import java.io.PrintStream;
 import java.lang.annotation.*;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.NoSuchFileException;
-import java.text.NumberFormat;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
+import java.time.chrono.ChronoLocalDate;
+import java.time.chrono.ChronoPeriod;
+import java.time.chrono.Chronology;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalField;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.regex.MatchResult;
 import java.util.stream.IntStream;
@@ -722,27 +718,21 @@ public class App {
     private static class SuperClass<A, B> {
         private A a;
         private B b;
-        private Class<?> cls = getClass();
-        public void getGenericType() {
-            // 根据泛型擦除可以知道在编译期间把泛型都替换成了Object，所以为了可以在运行时找到泛型的具体类型，就必须进行泛型补偿
-            // 根据虚拟机编译字节码来看，这个泛型的具体类型储存在class文件中LocalVariableTypeTable中的attribute中signature属性中
-            // 但本身具有泛型类生成的class文件是不知道自己的泛型具体类型，只有在编译其他类(调用的地方或子类)时才知道具体类型，所以这个具体的泛型就保存在调用类或子类中的signature属性里
-            // 这样在实际对泛型做具体类型时，就能在这个地方找到泛型类的是什么类型，也就是说这个东西应该在程序运行中所进行的
-            ParameterizedType generic = (ParameterizedType) cls.getGenericSuperclass();
-            cls = cls.getSuperclass();
-            if (cls != SuperClass.class) getGenericType();
-            System.out.println(Arrays.toString(generic.getActualTypeArguments()));
-        }
+        public void getGenericType() {}
     }
 
     private static class ChildClass extends SuperClass<String, Integer> {
         public void getGenericType() {
             // 根据泛型擦除可以知道在编译期间把泛型都替换成了Object，所以为了可以在运行时找到泛型的具体类型，就必须进行泛型补偿
             // 根据虚拟机编译字节码来看，这个泛型的具体类型储存在class文件中LocalVariableTypeTable中的attribute中signature属性中
-            // 但本身具有泛型类生成的class文件是不知道自己的泛型具体类型，只有在编译其他类(调用的地方或子类)时才知道具体类型，所以这个具体的泛型就保存在调用类或子类中的signature属性里
+            // 但本身具有泛型类生成的class文件是不知道自己的泛型具体类型，只有在编译其他类(调用的地方或子类)时才知道具体类型，
+            // 所以这个具体的泛型就保存在调用类或子类中的signature属性里
             // 这样在实际对泛型做具体类型时，就能在这个地方找到泛型类的是什么类型，也就是说这个东西应该在程序运行中所进行的
-            ParameterizedType generic = (ParameterizedType) this.getClass().getGenericSuperclass();
-            System.out.println(Arrays.toString(generic.getActualTypeArguments()));
+            Type parentType = getClass().getGenericSuperclass();
+            if (parentType instanceof ParameterizedType) {
+                ParameterizedType generic = (ParameterizedType) this.getClass().getGenericSuperclass();
+                System.out.println(Arrays.toString(generic.getActualTypeArguments()));
+            } else throw new UnsupportedOperationException("Unable to obtain generic direct parent class");
         }
     }
 
@@ -808,7 +798,8 @@ public class App {
 
             testGetter(new GetterImp());
 
-            SortedMap<String, Integer> sortedMap = new TreeMap<>(Comparator.comparingInt(String::length).thenComparing(String.CASE_INSENSITIVE_ORDER));
+            SortedMap<String, Integer> sortedMap =
+                    new TreeMap<>(Comparator.comparingInt(String::length).thenComparing(String.CASE_INSENSITIVE_ORDER));
             Random rand = ThreadLocalRandom.current();
             for (int i = 0; i < 10; i++)
                 sortedMap.put(Character.toString((char) (rand.nextInt(10) + 65)), Integer.valueOf(i));
@@ -877,8 +868,8 @@ public class App {
                                     ConsoleOutputController.generatorColorText(
                                             swapCharBufferDataAdjacentCharacters(charBuffer).rewind(),
                                             color
-                            )
-                    ));
+                                    )
+                            ));
             System.out.println();
 
             ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
@@ -900,12 +891,14 @@ public class App {
             TestLombok lombok = new TestLombok();
             System.out.println(lombok.getAge());
 
-            String[] compareString = { "BLACK", "WHITE", "RED", "GREEN", "CYAN", "BLUE", "BLACA", "BLACK", "a", "b", "a" };
+            String[] compareString = {"BLACK", "WHITE", "RED", "GREEN", "CYAN", "BLUE", "BLACA", "BLACK", "a", "b", "a"};
             Arrays.sort(compareString, Comparator.comparingInt(x -> x.toString().length()).thenComparing(new Comparator<Object>() {
-                @Override public int compare(Object o1, Object o2) {
+                @Override
+                public int compare(Object o1, Object o2) {
                     String previosString = o1.toString();
                     return compare(previosString, o2.toString(), previosString.length());
                 }
+
                 private int compare(String o1, String o2, int len) {
                     char c1 = o1.charAt(0);
                     char c2 = o2.charAt(0);
@@ -956,7 +949,7 @@ public class App {
 
             List<Template<?>> list = new ArrayList<>();
             list.add(createTemplate("c", "%+.2f", "打印正数和负数的符号"));
-            list.add(createTemplate("空格", "|% .2f|",  "在正数之前添加空格"));
+            list.add(createTemplate("空格", "|% .2f|", "在正数之前添加空格"));
             list.add(createTemplate("0", "%010.2f", "数字前面补0"));
             list.add(createTemplate("-", "|%-10.2f|", "左对齐"));
             list.add(createTemplate("(", "%(.2f", "将负数括在括号内", -3333.33));
@@ -971,7 +964,28 @@ public class App {
                     LocalDateTime.now()
             );
 
-            timerForDisplayingTime();
+//            timerForDisplayingTime();
+            ExecutorService service = Executors.newSingleThreadExecutor();
+            service.execute(Task.asRunnable(() -> {
+                TimeUnit.SECONDS.sleep(1);
+                System.out.println("Hello World.");
+                throw new Exception();
+            }));
+            service.shutdown();
+        }
+    }
+
+    interface Task {
+        void run() throws Exception;
+        static <T extends Throwable> void throwAs(Throwable t) throws T { throw (T) t; }
+        static Runnable asRunnable(Task task) {
+            return () -> {
+                try {
+                    task.run();
+                } catch (Exception e) {
+                    Task.throwAs(e);
+                }
+            };
         }
     }
 
