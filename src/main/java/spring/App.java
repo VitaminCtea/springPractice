@@ -30,16 +30,11 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.NoSuchFileException;
 import java.time.*;
-import java.time.chrono.ChronoLocalDate;
-import java.time.chrono.ChronoPeriod;
-import java.time.chrono.Chronology;
-import java.time.temporal.Temporal;
-import java.time.temporal.TemporalField;
-import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.regex.MatchResult;
 import java.util.stream.IntStream;
 
@@ -972,6 +967,35 @@ public class App {
                 throw new Exception();
             }));
             service.shutdown();
+
+            class LeastRecentlyPrincipleLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
+                private final BiFunction<LinkedHashMap<K, V>, Map.Entry<K, V>, Boolean> allowCache;
+                public LeastRecentlyPrincipleLinkedHashMap(
+                        boolean accessOrder,
+                        BiFunction<LinkedHashMap<K, V>, Map.Entry<K, V>, Boolean> allowCache
+                ) {
+                    super(16, 0.75f, accessOrder);
+                    this.allowCache = allowCache;
+                }
+
+                // 覆写removeEldestEntry，使其让LinkedHashMap有最近最少使用原则功能
+                // 方法返回的布尔值代表这个最近最少原则所使用的Cache是多大，超过Cache之后要删除Cache内的第一次添加的Entry
+                @Override public boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                    if (Objects.isNull(allowCache)) return super.removeEldestEntry(eldest);
+                    return allowCache.apply(this, eldest);
+                }
+            }
+
+            LinkedHashMap<String, Integer> leastRecentlyPrincipleLinkedHashMap =
+                    new LeastRecentlyPrincipleLinkedHashMap<>(true, (map, eldest) -> map.size() > 5);
+            for (int i = 0; i < 5; i++) leastRecentlyPrincipleLinkedHashMap.put(String.valueOf(i), (int) Character.forDigit(i, 10));
+            System.out.println(Arrays.toString(leastRecentlyPrincipleLinkedHashMap.entrySet().toArray()));
+            leastRecentlyPrincipleLinkedHashMap.get("0");
+            leastRecentlyPrincipleLinkedHashMap.get("0");
+            leastRecentlyPrincipleLinkedHashMap.get("1");
+            leastRecentlyPrincipleLinkedHashMap.get("0");
+            leastRecentlyPrincipleLinkedHashMap.put("5", 53);
+            System.out.println(Arrays.toString(leastRecentlyPrincipleLinkedHashMap.entrySet().toArray()));
         }
     }
 
