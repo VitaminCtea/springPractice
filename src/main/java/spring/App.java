@@ -996,8 +996,56 @@ public class App {
             leastRecentlyPrincipleLinkedHashMap.get("0");
             leastRecentlyPrincipleLinkedHashMap.put("5", 53);
             System.out.println(Arrays.toString(leastRecentlyPrincipleLinkedHashMap.entrySet().toArray()));
+//            int[][] lala = {{ 1, 1, 1}, { 0, 1, 1 }, { 2, 1, 1 }};
+//            int[][] lala2 = {{ 2, 5, 1 }, { 1, 1, 1 }, { 1, 1, 1}};
+//            System.out.println(Arrays.deepToString(matrixMultiplication(lala, lala2)));
+
+            int[][][] lala = {{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}}};
+            int[][] lala2 = {{2, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+            System.out.println(Arrays.deepToString(matrixMultiplication(lala, lala2)));
         }
     }
+
+    private static Object[] matrixMultiplication(Object matrix1, Object matrix2) {
+        int matrix1Len = getLength(matrix1);
+        Object[][] result = new Object[matrix1Len][];
+        if (matrix1.getClass().isArray() && matrix2.getClass().isArray()) {
+            for (int row = 0; row < matrix1Len; row++) {
+                Object obj1 = getArrayElement(matrix1, row);
+                Object obj2 = getArrayElement(matrix2, 0);
+
+                boolean matrix1IsArray = Array.get(obj1, 0).getClass().isArray();
+                boolean matrix2IsArray = Array.get(obj2, 0).getClass().isArray();
+                if (matrix1IsArray && matrix2IsArray) {
+                    result = (Object[][]) matrixMultiplication(obj1, obj2);
+                } else if (matrix1IsArray) {
+                    result = (Object[][]) matrixMultiplication(obj1, matrix2);
+                } else if (matrix2IsArray) {
+                    result = (Object[][]) matrixMultiplication(matrix1, obj2);
+                } else {
+                    int len = getLength(matrix2);
+                    if (len != getLength(getArrayElement(matrix1, row)))
+                        throw new IllegalArgumentException("The number of columns in the multiplier must be the same as " +
+                                "the number of rows in the multiplicand");
+                    int elementLen = getLength(obj2);
+                    result[row] = new Object[elementLen];
+                    for (int column = 0; column < elementLen; column++) {
+                        int val = 0;
+                        for (int k = 0; k < len; k++) {
+                            // 矩阵x * 矩阵y -> x的列数 * y的行数
+                            val += convertInt(obj1, k) * convertInt(Array.get(matrix2, k), column);
+                        }
+                        result[row][column] = val;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    private static Object getArrayElement(Object obj, int index) { return ((Object[]) obj)[index]; }
+    private static int convertInt(Object val, int index) { return ((int[]) val)[index]; }
+    private static int getLength(Object val) { return Array.getLength(val); }
 
     interface Task {
         void run() throws Exception;
