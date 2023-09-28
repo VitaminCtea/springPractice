@@ -9,22 +9,21 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 public abstract class Captcha {
     protected int width;
     protected int height;
-    @Setter protected Color background;
-    @Setter protected Font font;
-    @Getter protected String code;
     protected boolean randomCreated;
     protected long startTime;
 
+    @Setter protected Color background;
+    @Setter protected Font font;
+    @Getter protected String code;
+    @Getter protected final Random rand = new Random();
+
     protected int letters;
     protected final int expirationTime = 60;
-
-    @Getter protected final Random rand = ThreadLocalRandom.current();
     protected final StringBuilder verificationCode = new StringBuilder();
 
     // 仅适用于批量写入文件的方法，外部不建议调用
@@ -55,8 +54,8 @@ public abstract class Captcha {
         this.background = Color.white;
         this.randomCreated = code == null;
         this.code = randomCreated ? createAllCode() : code;
-        this.letters = letters;
         this.font = new Font(Font.SERIF, Font.PLAIN, (int) (height * 0.6));
+        this.letters = letters;
         this.fileType = "png";
     }
 

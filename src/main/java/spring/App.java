@@ -20,6 +20,8 @@ import spring.testRef.event.EmailService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.Point2D;
+import java.awt.geom.RectangularShape;
 import java.io.BufferedOutputStream;
 import java.io.PrintStream;
 import java.lang.annotation.*;

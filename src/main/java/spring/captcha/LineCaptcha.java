@@ -18,12 +18,14 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
     private final int interfereCount = 5;
     @Getter private static class RecordLetter {
         private final String letter;
-        private final int afterRotateLetterWidth;
         private final double radian;
-        RecordLetter(String letter, int afterRotateLetterWidth, double radian) {
+        private final int width;
+        private final int height;
+        RecordLetter(String letter, double radian, int width, int height) {
             this.letter = letter;
-            this.afterRotateLetterWidth = afterRotateLetterWidth;
             this.radian = radian;
+            this.width = width;
+            this.height = height;
         }
     }
     public LineCaptcha(int width, int height) { super(width, height); }
@@ -98,12 +100,13 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
         g.setFont(font);
 
         List<RecordLetter> recordLetters = recordLetterAttribute(g, useDefaultVerificationCode, verificationCode, code);
-        int letterTotalWidth = recordLetters.stream().mapToInt(RecordLetter::getAfterRotateLetterWidth).sum();
-        int remainingSpace = width - letterTotalWidth;
-        int letterSpace = remainingSpace / 3 / code.length();
+        int letterTotalWidth = recordLetters.stream().mapToInt(RecordLetter::getWidth).sum();
+        final int MARGIN = 20;
+        int contentWidth = width - MARGIN;
+        int remainingSpace = contentWidth - letterTotalWidth;
+        int letterSpace = remainingSpace / verificationCode.length();
 
-        int startLetterXPosition = (width - (letterTotalWidth + letterSpace * (letters - 1))) / 2;
-        int endLetterYPosition = height - font.getSize() / 2;
+        int startLetterXPosition = 10;
         int length = Math.min(code.length(), letters);
 
         AffineTransform oldTransform = g.getTransform();
@@ -111,16 +114,10 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
         for (int i = 0; i < length; i++) {
             RecordLetter letter = recordLetters.get(i);
             g.setPaint(generateRandomColor());
-
-            AffineTransform affineTransform =
-                    AffineTransform.getRotateInstance(
-                            letter.getRadian(),
-                            startLetterXPosition + letter.getAfterRotateLetterWidth() / 2.0,
-                            height / 2.0
-                    );
-            g.transform(affineTransform);
-            g.drawString(letter.getLetter(), startLetterXPosition, endLetterYPosition);
-            startLetterXPosition += letter.getAfterRotateLetterWidth() + letterSpace;
+            g.translate(startLetterXPosition + letter.getWidth() / 2, height / 3 + letter.getHeight() / 3);
+            g.rotate(letter.getRadian());
+            g.drawString(letter.getLetter(), 0, 0);
+            startLetterXPosition += letter.getWidth() + (i < length - 1 ? letterSpace : 0);
             g.setTransform(oldTransform);
         }
     }
@@ -131,18 +128,19 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
             StringBuilder verificationCode,
             String code
     ) {
-        if (verificationCode.length() >= letters) verificationCode.delete(0, letters);
         List<RecordLetter> recordLetters = new ArrayList<>();
         FontMetrics fontMetrics = g.getFontMetrics(font);
         int textHeight = fontMetrics.getHeight();
         int length = Math.min(code.length(), letters);
         for (int i = 0; i < length; i++) {
             String letter = String.valueOf(code.charAt(useDefaultVerificationCode ? rand.nextInt(code.length()) : i));
-            double radian = Math.PI / 5 * rand.nextDouble() * (rand.nextBoolean() ? 1 : -1);
             int textWidth = fontMetrics.stringWidth(letter);
-            int afterRotateWidth = (int) Math.sqrt(textWidth * textWidth + textHeight * textHeight) / 2;
+            double r = (rand.nextInt(45) * Math.PI / 180) * (rand.nextBoolean() ? 1 : -1);
+            double radian = Math.abs(r);
+            double width = textWidth * Math.cos(radian) + textHeight * Math.sin(radian);
+            double height = textHeight * Math.cos(radian) + textWidth * Math.sin(radian);
             verificationCode.append(letter);
-            recordLetters.add(new RecordLetter(letter, afterRotateWidth, radian));
+            recordLetters.add(new RecordLetter(letter, r, (int) width, (int) height));
         }
 
         return recordLetters;

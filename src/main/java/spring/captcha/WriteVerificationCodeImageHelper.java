@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
 public class WriteVerificationCodeImageHelper {
@@ -28,6 +29,7 @@ public class WriteVerificationCodeImageHelper {
             new PriorityQueue<>(Comparator.comparingLong(fileRecordInfo -> fileRecordInfo.fileAttributes.creationTime().toMillis()));
     private static final Logger logger = Logger.getLogger("spring.captcha.WriteVerificationCodeImageHelper");
     static {
+        logger.addHandler(new ConsoleHandler());
         logger.setUseParentHandlers(false);
     }
 
@@ -69,7 +71,7 @@ public class WriteVerificationCodeImageHelper {
         File directory = putVerificationCodeImageIntoAppointFile(normalize);
         if (this.directory == null) this.directory = directory;
         if (!enabledBatchWrite) cleanFile(directory, maxFilesSavedNumber);
-        makeImageWriteToOutputStream(bytes, new FileOutputStream(normalize));
+        makeImageWriteToOutputStream(bytes, Files.newOutputStream(Paths.get(normalize)));
     }
 
     private String normalizePath(String path, String fileType, String verificationCode) {
@@ -147,14 +149,10 @@ public class WriteVerificationCodeImageHelper {
     }
 
     public void batchWriteVerificationCodeImagesToFile(int writeNumber) {
-        batchWriteVerificationCodeImagesToFile(writeNumber, null, null);
+        batchWriteVerificationCodeImagesToFile(writeNumber, null);
     }
 
     public void batchWriteVerificationCodeImagesToFile(int writeNumber, String[] codes) {
-        batchWriteVerificationCodeImagesToFile(writeNumber, null, codes);
-    }
-
-    public void batchWriteVerificationCodeImagesToFile(int writeNumber, byte[] bytes, String[] codes) {
         pool = pool == null ? Executors.newCachedThreadPool() : pool;
         long startTime = System.currentTimeMillis();
         CountDownLatch countDownLatch = new CountDownLatch(writeNumber);
@@ -164,17 +162,11 @@ public class WriteVerificationCodeImageHelper {
             public BatchWrite(int index) { this.index = index; }
             @Override public void run() {
                 boolean hasCodeAndWriteCompleted = codes != null && codes.length > 0 && index < codes.length;
-                String code = hasCodeAndWriteCompleted ? codes[index % codes.length] : captcha.getCode();
+                String code = hasCodeAndWriteCompleted ? codes[index] : captcha.getCode();
                 StringBuilder verificationCode = new StringBuilder();
                 try {
                     makeImageWriteToFile(
-                            bytes == null ?
-                                    generateVerificationCodeImage(
-                                            captcha.getFileType(),
-                                            !hasCodeAndWriteCompleted,
-                                            verificationCode,
-                                            code
-                                    ) : bytes,
+                            generateVerificationCodeImage(captcha.getFileType(), !hasCodeAndWriteCompleted, verificationCode, code),
                             verificationCode.toString(),
                             true
                     );
@@ -191,7 +183,7 @@ public class WriteVerificationCodeImageHelper {
         try {
             countDownLatch.await();
             cleanFile(directory, writeNumber);
-            System.out.println("用时：" + (System.currentTimeMillis() - startTime) + "ms");
+            logger.info("用时：" + (System.currentTimeMillis() - startTime) + "ms");
         } catch (InterruptedException | IOException e) {
             recordError(e);
         }
