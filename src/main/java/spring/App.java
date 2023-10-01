@@ -1005,6 +1005,27 @@ public class App {
             int[][][] lala = {{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}}};
             int[][] lala2 = {{2, 1, 1}, {1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
             System.out.println(Arrays.deepToString(matrixMultiplication(lala, lala2)));
+
+            // 将一组结果放到ExecutorCompletionService中，使其能根据返回结果的顺序进行遍历
+            ExecutorService pool = Executors.newCachedThreadPool();
+            ExecutorCompletionService<Integer> completionService = new ExecutorCompletionService<>(pool);
+            for (int i = 0; i < 10; i++) {
+                int finalI = i;
+                completionService.submit(() -> {
+                    TimeUnit.SECONDS.sleep(finalI);
+                    return finalI;
+                });
+            }
+
+            for (int i = 0; i < 10; i++) {
+                try {
+                    System.out.println(completionService.take().get());
+                } catch (InterruptedException e) { e.printStackTrace(); } catch (ExecutionException e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    pool.shutdown();
+                }
+            }
         }
     }
 

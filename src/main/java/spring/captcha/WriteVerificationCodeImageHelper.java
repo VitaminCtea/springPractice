@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
@@ -80,7 +81,7 @@ public class WriteVerificationCodeImageHelper {
             String filename =
                     new StringJoiner("_")
                             .add(path)
-                            .add(String.valueOf(Math.abs(captcha.getRand().nextInt())))
+                            .add(String.valueOf(System.nanoTime()))
                             .add(verificationCode)
                             .add(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")) + "." + fileType.toLowerCase())
                             .toString();
@@ -144,7 +145,7 @@ public class WriteVerificationCodeImageHelper {
             boolean useDefaultVerificationCode,
             StringBuilder verificationCode,
             String code
-    ) {
+    ) throws IOException {
         return ((Captcha.ILineCaptcha) captcha).generateVerificationCodeImage(fileType, useDefaultVerificationCode, verificationCode, code);
     }
 

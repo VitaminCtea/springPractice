@@ -9,6 +9,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 public abstract class Captcha {
@@ -20,7 +21,6 @@ public abstract class Captcha {
     @Setter protected Color background;
     @Setter protected Font font;
     @Getter protected String code;
-    @Getter protected final Random rand = new Random();
 
     protected int letters;
     protected final int expirationTime = 60;
@@ -32,7 +32,7 @@ public abstract class Captcha {
                 String fileType,
                 boolean useDefaultVerificationCode,
                 StringBuilder verificationCode, String code
-        );
+        ) throws IOException;
     }
 
     @Getter @Setter private String fileType;
@@ -54,7 +54,7 @@ public abstract class Captcha {
         this.background = Color.white;
         this.randomCreated = code == null;
         this.code = randomCreated ? createAllCode() : code;
-        this.font = new Font(Font.SERIF, Font.PLAIN, (int) (height * 0.6));
+        this.font = new Font(Font.SERIF, Font.PLAIN, (int) (height * 0.45));
         this.letters = letters;
         this.fileType = "png";
     }
@@ -78,8 +78,15 @@ public abstract class Captcha {
         return bytes;
     }
 
-    protected Color generateRandomColor() { return new Color(colorValueOne(), colorValueOne(), colorValueOne()); }
-    private int colorValueOne() { return rand.nextInt(255); }
+    protected Color generateRandomColor() {
+        int red = colorValueOne();
+        int green = colorValueOne();
+        int blue = colorValueOne();
+        if (red == background.getRed() && green == background.getGreen() && blue == background.getBlue()) return generateRandomColor();
+        return new Color(red, green, blue);
+    }
+
+    private int colorValueOne() { return ThreadLocalRandom.current().nextInt(255); }
 
     protected int getVerificationStatus(String userInputVerificationCode) {
         int deltaTime = (int) ((System.currentTimeMillis() - startTime) / 1000);
@@ -103,5 +110,5 @@ public abstract class Captcha {
 
     public String getVerificationCode() { return verificationCode.toString(); }
 
-    public abstract byte[] generateVerificationCodeImage();
+    public abstract byte[] generateVerificationCodeImage() throws IOException;
 }

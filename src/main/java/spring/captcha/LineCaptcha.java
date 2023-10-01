@@ -8,20 +8,23 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
 public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
     private final static Logger logger = Logger.getLogger("spring.captcha.LineCaptcha");
+    private Random rand;
     static {
         logger.setUseParentHandlers(false);
     }
-    private final int interfereCount = 5;
+
     @Getter private static class RecordLetter {
         private final String letter;
         private final double radian;
-        private final int width;
-        private final int height;
-        RecordLetter(String letter, double radian, int width, int height) {
+        private final double width;
+        private final double height;
+        RecordLetter(String letter, double radian, double width, double height) {
             this.letter = letter;
             this.radian = radian;
             this.width = width;
@@ -32,7 +35,7 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
     public LineCaptcha(int width, int height, int letters) { super(width, height, letters); }
     public LineCaptcha(int width, int height, String code) { super(width, height, code); }
 
-    @Override public byte[] generateVerificationCodeImage() {
+    @Override public byte[] generateVerificationCodeImage() throws IOException {
         return generateVerificationCodeImage(getFileType(), randomCreated, verificationCode, code);
     }
 
@@ -41,23 +44,20 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
             boolean useDefaultVerificationCode,
             StringBuilder verificationCode,
             String code
-    ) {
-        try {
-            BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = bufferedImage.createGraphics();
+    ) throws IOException {
+        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = bufferedImage.createGraphics();
+        rand = ThreadLocalRandom.current();
 
-            makeImageHighFidelityQuality(g);
-            generateRoundedCanvas(g, bufferedImage);
+        makeImageHighFidelityQuality(g);
+        generateRoundedCanvas(g, bufferedImage);
 
-            generateHotPixel(g);
-            generateInterferenceLine(g);
-            generateVerificationCode(g, useDefaultVerificationCode, verificationCode, code);
-            g.dispose();
+        generateHotPixel(g);
+        generateInterferenceLine(g);
+        generateVerificationCode(g, useDefaultVerificationCode, verificationCode, code);
 
-            return saveImageByteArray(bufferedImage, fileType);
-        } catch (IOException e) { logger.severe(e.getMessage()); }
-
-        return new byte[0];
+        g.dispose();
+        return saveImageByteArray(bufferedImage, fileType);
     }
 
     private void makeImageHighFidelityQuality(Graphics2D g) {
@@ -83,6 +83,7 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
     }
 
     private void generateInterferenceLine(Graphics2D g) {
+        int interfereCount = 5;
         generatorInterference(
                 g,
                 interfereCount,
@@ -100,25 +101,26 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
         g.setFont(font);
 
         List<RecordLetter> recordLetters = recordLetterAttribute(g, useDefaultVerificationCode, verificationCode, code);
-        int letterTotalWidth = recordLetters.stream().mapToInt(RecordLetter::getWidth).sum();
-        final int MARGIN = 20;
-        int contentWidth = width - MARGIN;
-        int remainingSpace = contentWidth - letterTotalWidth;
-        int letterSpace = remainingSpace / verificationCode.length();
+        double letterTotalWidth = recordLetters.stream().mapToDouble(RecordLetter::getWidth).sum();
+        double remainingSpace = (width - letterTotalWidth) / 2;
+        final int VERIFICATION_CODE_LENGTH = verificationCode.length();
+        final int NEED_USE_SPACE_COUNT = VERIFICATION_CODE_LENGTH - 1;
+        final double MARGIN = remainingSpace / 2 / NEED_USE_SPACE_COUNT;
+        double totalWidth = letterTotalWidth + MARGIN * NEED_USE_SPACE_COUNT;
+        double letterHeight = g.getFontMetrics(font).getHeight();
+        double startLetterXPosition = (width - totalWidth) / 2;
 
-        int startLetterXPosition = 10;
         int length = Math.min(code.length(), letters);
-
         AffineTransform oldTransform = g.getTransform();
 
         for (int i = 0; i < length; i++) {
             RecordLetter letter = recordLetters.get(i);
             g.setPaint(generateRandomColor());
-            g.translate(startLetterXPosition + letter.getWidth() / 2, height / 3 + letter.getHeight() / 3);
+            g.translate(startLetterXPosition, (double) height / 3 + letterHeight / 2);
             g.rotate(letter.getRadian());
             g.drawString(letter.getLetter(), 0, 0);
-            startLetterXPosition += letter.getWidth() + (i < length - 1 ? letterSpace : 0);
             g.setTransform(oldTransform);
+            startLetterXPosition += letter.getWidth() + (i < length - 1 ? MARGIN : 0);
         }
     }
 
@@ -131,16 +133,17 @@ public class LineCaptcha extends Captcha implements Captcha.ILineCaptcha {
         List<RecordLetter> recordLetters = new ArrayList<>();
         FontMetrics fontMetrics = g.getFontMetrics(font);
         int textHeight = fontMetrics.getHeight();
+
         int length = Math.min(code.length(), letters);
         for (int i = 0; i < length; i++) {
             String letter = String.valueOf(code.charAt(useDefaultVerificationCode ? rand.nextInt(code.length()) : i));
             int textWidth = fontMetrics.stringWidth(letter);
-            double r = (rand.nextInt(45) * Math.PI / 180) * (rand.nextBoolean() ? 1 : -1);
+            double r = rand.nextInt(45) * (rand.nextBoolean() ? 1 : -1) * Math.PI / 180;
             double radian = Math.abs(r);
-            double width = textWidth * Math.cos(radian) + textHeight * Math.sin(radian);
-            double height = textHeight * Math.cos(radian) + textWidth * Math.sin(radian);
+            double afterRotateWidth = textWidth * Math.cos(radian) + textHeight * Math.sin(radian);
+            double afterRotateHeight = textWidth * Math.sin(radian) + textHeight * Math.cos(radian);
             verificationCode.append(letter);
-            recordLetters.add(new RecordLetter(letter, r, (int) width, (int) height));
+            recordLetters.add(new RecordLetter(letter, r, afterRotateWidth, afterRotateHeight));
         }
 
         return recordLetters;

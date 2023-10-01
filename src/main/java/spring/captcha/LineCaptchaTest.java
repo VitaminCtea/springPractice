@@ -1,9 +1,11 @@
 package spring.captcha;
 
+import java.io.IOException;
+
 public class LineCaptchaTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         final int FILES_NUMBER = 12;
-        Captcha captcha = CaptchaFactory.createLineCaptcha(300, 70, 5);
+        Captcha captcha = CaptchaFactory.createLineCaptcha(500, 100, 5);
         byte[] bytes = captcha.generateVerificationCodeImage();
         System.out.println(captcha.getVerificationMessage("jiji"));
         System.out.println(captcha.getVerificationMessage(captcha.getVerificationCode()));
