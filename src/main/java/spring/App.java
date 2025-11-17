@@ -1368,7 +1368,7 @@ public class App {
                         Files.getFileStore(existFile).supportsFileAttributeView(AclFileAttributeView.class) ? "Windows系统" : "Posix标准系统");
             }
 
-            private static class PosixStandardFileSystem {
+            private static class PosixStandardFileSystem {  // 根据命令行java参数解析模式并递归的更改目录权限(仅在Posix标准系统生效)
                 private static final Pattern PATTERN = Pattern.compile("^([ugoa]+)([+-=])([rwx]*)$");
                 private static final String USER_PRINCIPAL = "ugo";
                 private static final String OPERATOR = "+-=";
@@ -1387,7 +1387,10 @@ public class App {
                         if (eachExpression.isEmpty()) throw new IllegalArgumentException("Invalid mode: empty sub-expression");
                         Matcher matcher = PATTERN.matcher(eachExpression);
                         if (!matcher.matches()) throw new IllegalArgumentException("Invalid mode");
+
                         String userPrincipal = matcher.group(1);
+                        if (userPrincipal.isEmpty()) throw new IllegalArgumentException("user principal must be added");
+
                         char operator = matcher.group(2).charAt(0);
                         String permission = matcher.group(3);
 
@@ -1399,14 +1402,15 @@ public class App {
                             setAllow(allUserPrincipal, userPrincipal.charAt(i));
                         }
 
-                        boolean hasUserPrincipal = false;   // 必须指定主体
+                        boolean hasValidUserPrincipal = false;   // 必须指定有效主体
                         for (boolean target: allUserPrincipal.values()) {
                             if (target) {
-                                hasUserPrincipal = true;
+                                hasValidUserPrincipal = true;
                                 break;
                             }
                         }
-                        if (!hasUserPrincipal) throw new IllegalArgumentException("Invalid mode");
+
+                        if (!hasValidUserPrincipal) throw new IllegalArgumentException("Check user principal mode(ugo).");
 
                         setAllow(allOperator, operator);  // 具体操作
                         setAllAllow(allPermission, permission::charAt, permission.length());    // 设置权限
@@ -1429,7 +1433,7 @@ public class App {
                             next = addPermissions;
                         }
 
-                        updaterPermissions(canActualOperated, current, next, allUserPrincipal, allPermission, isAssign);
+                        if (canActualOperated) updaterPermissions(current, next, allUserPrincipal, allPermission, isAssign);
                         resetStatusTable(allUserPrincipal);
                         resetStatusTable(allOperator);
                         resetStatusTable(allPermission);
@@ -1458,24 +1462,21 @@ public class App {
                 }
 
                 private static void updaterPermissions(
-                        boolean shouldUpdate,
                         Set<PosixFilePermission> addPermissions,
                         Set<PosixFilePermission> removePermissions,
                         Map<Character, Boolean> targets,
                         Map<Character, Boolean> permissions,
                         boolean isAssign
                 ) {
-                    if (shouldUpdate) {
-                        PosixFilePermission[] posixFilePermissions = PosixFilePermission.values();
-                        for (int i = 0, index = 0; i < targets.size(); i++, index += 3) {
-                            if (targets.get(USER_PRINCIPAL.charAt(i))) {
-                                for (int j = 0; j < permissions.size(); j++) {
-                                    PosixFilePermission posixFilePermission = posixFilePermissions[index + j];
-                                    boolean canAccess  = permissions.get(ACCESS_PERMISSION.charAt(j));
-                                    if (canAccess) addPermissions.add(posixFilePermission);
-                                    if (isAssign && !canAccess) removePermissions.add(posixFilePermission);
-                                }
-                            }
+                    PosixFilePermission[] posixFilePermissions = PosixFilePermission.values();
+                    for (int i = 0, index = 0; i < targets.size(); i++, index += 3) {
+                        int j = 0;
+                        while (j < permissions.size() && targets.get(USER_PRINCIPAL.charAt(i))) {
+                            PosixFilePermission posixFilePermission = posixFilePermissions[index + j];
+                            boolean canAccess = permissions.get(ACCESS_PERMISSION.charAt(j));
+                            if (canAccess) addPermissions.add(posixFilePermission);
+                            if (isAssign && !canAccess) removePermissions.add(posixFilePermission);
+                            j++;
                         }
                     }
                 }
@@ -1534,7 +1535,7 @@ public class App {
             private static class PosixCompatibilityUtil {
                 private static final Path TEST_PATH = Paths.get(".");
                 private static PosixFileAttributes attributes;
-                public static boolean isSupported() {
+                public static boolean isSupported() throws IOException {
                     if (!FileSystems.getDefault().supportedFileAttributeViews().contains(PosixFileAttributeView.class.getName())) { return false; }
                     boolean isSupportPosix;
                     try {   // 支持但还需判断是否真正兼容支持(苹果系统支持并兼容Posix)
